@@ -1,6 +1,9 @@
 // Import required AWS SDK clients and commands for Node.js
 import {AnalyzeDocumentCommand} from "@aws-sdk/client-textract";
 import {TextractClient} from "@aws-sdk/client-textract";
+import trp from 'amazon-textract-response-parser'
+
+const {TextractDocument} = trp;
 
 // Set the AWS Region.
 const REGION = "us-east-2"; //e.g. "us-east-1"
@@ -18,10 +21,9 @@ const params = {
             Name: photo
         },
     },
-    FeatureTypes: ['FORMS'],
+    FeatureTypes: ['FORMS', 'TABLES'],
 }
 
-let data = [];
 const displayBlockInfo = async (response) => {
     try {
         response.Blocks.forEach(block => {
@@ -35,7 +37,7 @@ const displayBlockInfo = async (response) => {
                 console.log(`Confidence: ${block.Confidence}`)
             }
             else {}
-            if (block.BlockType == 'CELL') {
+            if (block.BlockType == '') {
                 console.log("Cell info:")
                 console.log(`   Column Index - ${block.ColumnIndex}`)
                 console.log(`   Row - ${block.RowIndex}`)
@@ -43,11 +45,10 @@ const displayBlockInfo = async (response) => {
                 console.log(`   Row Span - ${block.RowSpan}`)
             }
             if ("Relationships" in block && block.Relationships !== undefined) {
-                console.log(block.Relationships)
                 console.log("Geometry:")
                 console.log(`   Bounding Box - ${JSON.stringify(block.Geometry.BoundingBox)}`)
                 console.log(`   Polygon - ${JSON.stringify(block.Geometry.Polygon)}`)
-            }
+            };
             console.log("-----")
         });
     } catch (err) {
@@ -55,17 +56,51 @@ const displayBlockInfo = async (response) => {
     }
 }
 
+
+
 const analyze_document_text = async () => {
     try {
         const analyzeDoc = new AnalyzeDocumentCommand(params);
         const response = await textractClient.send(analyzeDoc);
-        //console.log(response)
-        displayBlockInfo(response)
+        const document = new TextractDocument(response)
+
+        // for (const page of document.iterPages()) {
+        //     console.log(page.form.str())
+        // }
+
+        let rowsArr = [];
+
+        for (const page of document.iterPages()) {
+            for (const table of page.iterTables()) {
+                for (const row of table.iterRows()) {
+                    console.table(row.str())
+                }
+            }
+        }
+
+        //for (const page of document.iterPages()) {
+        //    // (In Textract's output order...)
+        //    for (const line of page.iterLines()) {
+        //        for (const word of line.iterWords()) {
+        //            //console.log(word.text);
+        //            //const addr = page.form.getFieldByKey(word.text);
+        //            const value = page.form.str()
+        //            for (const table of page.iterTables()) {
+        //                for (const row of table.iterRows()) {
+        //                    console.table(row.str())
+        //                }
+
+        //            }
+        //            //console.log(addr)
+        //            //console.log(value);
+        //        }
+        //    }
+        //}
+        //displayBlockInfo(response)
         return response; // For unit tests.
     } catch (err) {
         console.log("Error", err);
     }
 }
-
 
 analyze_document_text()

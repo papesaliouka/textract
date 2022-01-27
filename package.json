@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-textract": "^3.45.0"
+    "@aws-sdk/client-textract": "^3.45.0",
+    "amazon-textract-response-parser": "^0.1.2"
   }
 }
